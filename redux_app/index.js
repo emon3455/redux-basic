@@ -1,5 +1,8 @@
 // const {createStore} = require("redux")
 
+// const { default: axios } = require("axios");
+// const { createStore } = require("redux");
+
 // const INCREMENT = "INCREMENT";
 // const DECREMENT = "DECREMENT";
 // const RESET = "RESET";
@@ -199,65 +202,163 @@
 
 
 
-// ------------------middleware--------------------------
+// // ------------------middleware--------------------------
+// const { createStore, applyMiddleware } = require("redux");
+// const { default: logger } = require("redux-logger");
+
+// // products
+
+// //step-0: products CONSTANTS
+// const GET_PRODUCTS = "GET_PRODUCTS";
+// const ADD_PRODUCTS = "ADD_PRODUCTS";
+
+// //step-1: initial state
+// const initialProductState = {
+//     products: ["sugar", "salt"],
+//     numberofProducts: 2,
+// }
+
+
+// //step-2: action
+// const getProducts = () => {
+//     return {
+//         type: GET_PRODUCTS
+//     }
+// }
+
+// const addProducts = (product) => {
+//     return {
+//         type: ADD_PRODUCTS,
+//         payload: product
+//     }
+// }
+
+
+// //step-3: products reudcer
+// const productsReducer = (state = initialProductState, action) => {
+//     switch (action.type) {
+//         case GET_PRODUCTS:
+//             return {
+//                 ...state
+//             }
+
+//         case ADD_PRODUCTS:
+//             return {
+//                 products: [...state.products, action.payload],
+//                 numberofProducts : state.numberofProducts + 1,
+//             }
+
+//         default:
+//          return  state;
+//     }
+// }
+
+
+// // store:
+// const store = createStore(productsReducer, applyMiddleware(logger));
+
+// store.subscribe(()=>{
+//     console.log(store.getState());
+// })
+
+// store.dispatch(getProducts());
+// store.dispatch(addProducts("Emon"))
+// store.dispatch(addProducts("Elina"))
+
+
+// ------------------ redux thunk and data fetching ---------------
+
+const { default: axios } = require("axios");
 const { createStore, applyMiddleware } = require("redux");
-const { default: logger } = require("redux-logger");
+const { default: thunk } = require("redux-thunk");
 
-// products
+// constant
+const GET_TODOS_REQUEST = "GET_TODOS_REQUEST";
+const GET_TODOS_SUCCESS = "GET_TODOS_SUCCESS";
+const GET_TODOS_FAILED  = "GET_TODOS_FAILED";
+const API_URL = "https://jsonplaceholder.typicode.com/todos"
 
-//step-0: products CONSTANTS
-const GET_PRODUCTS = "GET_PRODUCTS";
-const ADD_PRODUCTS = "ADD_PRODUCTS";
 
-//step-1: initial state
-const initialProductState = {
-    products: ["sugar", "salt"],
-    numberofProducts: 2,
+// initial state
+const initialTodosState={
+    todos: [],
+    isLoading: false,
+    error: null,
 }
 
+// action
+const getTodosRequest=()=>{
+    return{
+        type: GET_TODOS_REQUEST
+    };
+};
 
-//step-2: action
-const getProducts = () => {
-    return {
-        type: GET_PRODUCTS
+const getTodosfailed=(error)=>{
+    return{
+        type: GET_TODOS_FAILED,
+        payload: error
     }
 }
 
-const addProducts = (product) => {
-    return {
-        type: ADD_PRODUCTS,
-        payload: product
+const getTodosSuccess=(todos)=>{
+    return{
+        type: GET_TODOS_SUCCESS,
+        payload: todos, 
     }
 }
 
+// function
 
-//step-3: products reudcer
-const productsReducer = (state = initialProductState, action) => {
+// reducer
+const todosreducer = (state=initialTodosState, action)=>{
     switch (action.type) {
-        case GET_PRODUCTS:
-            return {
-                ...state
+        case GET_TODOS_REQUEST:
+            return{
+                ...state,
+                isLoading: true
             }
-
-        case ADD_PRODUCTS:
-            return {
-                products: [...state.products, action.payload],
-                numberofProducts : state.numberofProducts + 1,
+        case GET_TODOS_SUCCESS:
+            return{
+                ...state,
+                isLoading: false,
+                todos: action.payload
             }
-
+        case GET_TODOS_FAILED:
+            return{
+                ...state,
+                isLoading: false,
+                error: action.payload
+            }
+    
         default:
-         return  state;
+            return state
     }
 }
 
+// async action creator
+const fetchData=()=>{
+    return (dispatch)=>{
+        dispatch(getTodosRequest());
+        axios
+        .get(API_URL)
+        .then(res=> {
+            const todos = res.data;
+            const titles = todos.map(todo=> todo.title);
+            dispatch(getTodosSuccess(titles))
+        })
+        .catch(er=>{
+            const errorMessage = er.message;
+            dispatch(getTodosfailed(errorMessage))
+        })
+    }
+}
 
-// store:
-const store = createStore(productsReducer, applyMiddleware(logger));
+// store
+const store = createStore(todosreducer, applyMiddleware(thunk));
 
 store.subscribe(()=>{
     console.log(store.getState());
-})
+});
 
-store.dispatch(getProducts());
-store.dispatch(addProducts("Emon"))
-store.dispatch(addProducts("Elina"))
+
+store.dispatch(fetchData());
